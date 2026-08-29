@@ -1,24 +1,9 @@
 from backend.db.db import Base
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy import ForeignKey, DateTime, func
-from enum import Enum
 from sqlalchemy import Enum as SQLEnum
 from datetime import datetime
-
-
-class SubmitterType(str, Enum):
-    individual = "individual"
-    commuity_org = "community_org"
-    panchayati_Raj_Insitiution = "pri"
-    urban_Local_Body = "ulb"
-    govt_dept = "govt_dept"
-
-class StatusType(str, Enum):
-    submitted =  "submitted"
-    under_review = "under_review"
-    routed = "routed"
-    rejected = "rejected"
-    duplicate = "duplicate"
+from backend.enums import SubmitterType, StatusType
 
 
 class Problems(Base):
@@ -30,7 +15,7 @@ class Problems(Base):
     priority_score: Mapped[int] = mapped_column()
     submitted_by: Mapped[int] = mapped_column(ForeignKey("users.id"))
 
-    submiter_type: Mapped[SubmitterType] = mapped_column(
+    submitter_type: Mapped[SubmitterType] = mapped_column(
         SQLEnum(SubmitterType),
         nullable=False
     )
@@ -41,10 +26,10 @@ class Problems(Base):
 
     status: Mapped[StatusType] = mapped_column(
         SQLEnum(StatusType),
-        nullable=False
+        nullable=True
     )
 
-    duplicate_problem: Mapped[int] = mapped_column(ForeignKey("problems.id"))
+    duplicate_problem: Mapped[int] = mapped_column(ForeignKey("problems.id"), nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
@@ -53,5 +38,17 @@ class Problems(Base):
 
     )
 
+class ProblemMedia(Base):
 
+    __tablename__ = "problem_media"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    problem_id: Mapped[int] = mapped_column(ForeignKey("problems.id"))
+    file_url:Mapped[str] = mapped_column(nullable=False)
+    file_type: Mapped[str] = mapped_column(nullable=False)
 
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False
+    )
+        

@@ -1,22 +1,45 @@
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from backend.schemas.schema import ProblemSchemaInput
-from backend.db.db import get_db
-from backend.Models.problems_db import Problems
+from backend.Models.problems_db import Problems, ProblemMedia
+from pathlib import Path
+from fastapi import UploadFile
 
 
 
-async def inputProblems(data: ProblemSchemaInput, db: AsyncSession):
-    problems = Problems(
+UPLOAD_DIR = Path("backend/media")
+
+async def inputProblems(data: ProblemSchemaInput, 
+                        photo: UploadFile,
+                        db: AsyncSession):
+    
+    problem = Problems(
         title= data.title,
         description= data.description,
         submitter_type= data.submitter_type,
         district=data.district,
-        latitide=data.latitide,
+        latitude=data.latitide,
         longitude=data.longitude,
     )
 
-    db.add(problems)
-    await db.commit()
+    db.add(problem)
+    await db.flush()
 
-    return problems
+    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+    file_path = UPLOAD_DIR / f"{problem.id}_{photo.filename}"
+
+    with file_path.open("wb") as buffer:
+        buffer.write(await photo.read())
+
+    media = ProblemMedia(
+        problem_id=problem.id,
+        file_url=str(file_path),
+        file_type=photo.content_type
+    )
+
+    db.add(media)
+
+    await db.commit()
+    await db.refresh(problem)
+
+    return problem
