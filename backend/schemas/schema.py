@@ -7,7 +7,7 @@ class ProblemSchemaInput(BaseModel):
     description: str
     submitter_type: SubmitterType
     district: str
-    latitide: float
+    latitude: float
     longitude: float
 
 class ProblemSchemaOutput(BaseModel):
@@ -15,10 +15,9 @@ class ProblemSchemaOutput(BaseModel):
     description: str
     submitter_type: SubmitterType
     district: str
-    latitide: float
+    latitude: float
     longitude: float
-    Status: StatusType
+    status: StatusType
     
 
 
-    

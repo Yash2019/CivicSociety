@@ -18,7 +18,7 @@ async def inputProblems(data: ProblemSchemaInput,
         description= data.description,
         submitter_type= data.submitter_type,
         district=data.district,
-        latitude=data.latitide,
+        latitude=data.latitude,
         longitude=data.longitude,
     )
 

@@ -12,8 +12,9 @@ class Problems(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     title: Mapped[str] = mapped_column(nullable=False)
     description: Mapped[str] = mapped_column(nullable=False)
-    priority_score: Mapped[int] = mapped_column()
-    submitted_by: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    priority_score: Mapped[int] = mapped_column(nullable=True)
+    submitted_by: Mapped[int] = mapped_column(ForeignKey("users.id"),
+                                              nullable=True)
 
     submitter_type: Mapped[SubmitterType] = mapped_column(
         SQLEnum(SubmitterType),
