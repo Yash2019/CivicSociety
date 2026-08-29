@@ -4,6 +4,7 @@ from sqlalchemy import ForeignKey, DateTime, func
 from sqlalchemy import Enum as SQLEnum
 from datetime import datetime
 from backend.enums import SubmitterType, StatusType
+from backend.Models.users_db import Users
 
 
 class Problems(Base):
@@ -27,7 +28,8 @@ class Problems(Base):
 
     status: Mapped[StatusType] = mapped_column(
         SQLEnum(StatusType),
-        nullable=True
+        nullable=True,
+        default=StatusType.submitted
     )
 
     duplicate_problem: Mapped[int] = mapped_column(ForeignKey("problems.id"), nullable=True)

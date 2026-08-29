@@ -4,6 +4,7 @@ from backend.schemas.schema import ProblemSchemaInput
 from backend.Models.problems_db import Problems, ProblemMedia
 from pathlib import Path
 from fastapi import UploadFile
+from backend.enums import StatusType
 
 
 
@@ -20,6 +21,7 @@ async def inputProblems(data: ProblemSchemaInput,
         district=data.district,
         latitude=data.latitude,
         longitude=data.longitude,
+        status=StatusType.submitted
     )
 
     db.add(problem)

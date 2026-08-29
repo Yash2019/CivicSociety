@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from backend.db.db import get_db
 from backend.schemas.schema import ProblemSchemaInput, ProblemSchemaOutput
 from backend.services.classification import inputProblems
-from backend.enums import StatusType, SubmitterType
+from backend.enums import SubmitterType
 
 router = APIRouter()
 
@@ -17,7 +17,9 @@ async def Problems_endpoint(
     longitude: float = Form(...),
     photo: UploadFile = File(...),
 
-    db: AsyncSession = Depends(get_db)),:
+    db: AsyncSession = Depends(get_db),
+    ):
+
 
     data = ProblemSchemaInput(
             title=title,
@@ -28,4 +30,4 @@ async def Problems_endpoint(
             longitude=longitude,
     )
 
-    return await inputProblems(data, db)
+    return await inputProblems(data, photo, db)
