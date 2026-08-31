@@ -11,7 +11,7 @@ class Problems(Base):
     __tablename__ = "problems"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    title: Mapped[str] = mapped_column(nullable=False)
+    title: Mapped[str] = mapped_column(nullable=True)
     description: Mapped[str] = mapped_column(nullable=False)
     priority_score: Mapped[int] = mapped_column(nullable=True)
     submitted_by: Mapped[int] = mapped_column(ForeignKey("users.id"),

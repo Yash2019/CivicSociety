@@ -1,10 +1,11 @@
 
 from sqlalchemy.ext.asyncio import AsyncSession
-from backend.schemas.schema import ProblemSchemaInput
+from backend.schemas.schema import ProblemSchemaInput, ProblemSchemaOutput
 from backend.Models.problems_db import Problems, ProblemMedia
 from pathlib import Path
 from fastapi import UploadFile
 from backend.enums import StatusType
+from sqlalchemy import select
 
 
 
@@ -45,3 +46,10 @@ async def inputProblems(data: ProblemSchemaInput,
     await db.refresh(problem)
 
     return problem
+
+async def getProblems(user_id: int, db: AsyncSession):
+    user_problem = select(Problems).where(Problems.id == user_id)
+    result = await db.execute(user_problem)
+
+    prob = result.scalar_one_or_none()
+    return prob

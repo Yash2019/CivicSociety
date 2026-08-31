@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, UploadFile, Form, File
 from sqlalchemy.ext.asyncio import AsyncSession
 from backend.db.db import get_db
 from backend.schemas.schema import ProblemSchemaInput, ProblemSchemaOutput
-from backend.services.classification import inputProblems
+from backend.services.classification import inputProblems, getProblems
 from backend.enums import SubmitterType
 
 router = APIRouter()
@@ -31,3 +31,7 @@ async def Problems_endpoint(
     )
 
     return await inputProblems(data, photo, db)
+
+@router.get('/get_problem{user_id}', response_model=ProblemSchemaOutput)
+async def get_problem_endpoint(user_id: int, db: AsyncSession = Depends(get_db)):
+    return await getProblems(user_id, db)
