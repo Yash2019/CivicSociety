@@ -3,7 +3,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy import ForeignKey, DateTime, func
 from sqlalchemy import Enum as SQLEnum
 from datetime import datetime
-from backend.enums import SubmitterType, StatusType
+from backend.enums import SubmitterType, StatusType, ProblemCategory
 from backend.Models.users_db import Users
 
 
@@ -33,6 +33,11 @@ class Problems(Base):
     )
 
     duplicate_problem: Mapped[int] = mapped_column(ForeignKey("problems.id"), nullable=True)
+
+    category: Mapped[ProblemCategory] = mapped_column(
+        SQLEnum(ProblemCategory),
+        nullable=True
+    )
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

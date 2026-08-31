@@ -6,6 +6,7 @@ from pathlib import Path
 from fastapi import UploadFile
 from backend.enums import StatusType
 from sqlalchemy import select
+from backend.trans.translation import classify_issue
 
 
 
@@ -22,7 +23,8 @@ async def inputProblems(data: ProblemSchemaInput,
         district=data.district,
         latitude=data.latitude,
         longitude=data.longitude,
-        status=StatusType.submitted
+        status=StatusType.submitted,
+        category = classify_issue(data.description)
     )
 
     db.add(problem)
