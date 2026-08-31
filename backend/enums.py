@@ -15,6 +15,18 @@ class StatusType(str, Enum):
     rejected = "rejected"
     duplicate = "duplicate"
 
+class ProblemCategory(str, Enum):
+    education = "education"
+    agriculture = "agriculture"
+    healthcare = "healthcare"
+    water_resources = "water_resources"
+    environment = "environment"
+    energy = "energy"
+    urban_development = "urban_development"
+    accessibility = "accessibility"
+    public_administration = "public_administration"
+    rural_livelihoods = "rural_livelihoods"
+
 class InstitutionType(str, Enum):
     university = 'university'
     industry = 'industry'
@@ -24,17 +36,17 @@ class InstitutionType(str, Enum):
     research_lab = 'research_lab'
 
 class InstitutionDomain(str, Enum):
-    eduction="education"
+    education="education"
     agriculture="agriculture"
     healthcare="healthcare"
-    water_resource="water_resources"
-    enviornment = "environment"
+    water_resources="water_resources"
+    environment = "environment"
     energy = "energy"
     urban_development = "urban_development"
     accessibility = "accessibility"
     public_administration = "public_administration"
     rural_livelihoods = "rural_livelihoods"
 
-    
+
 
  
