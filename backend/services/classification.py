@@ -7,6 +7,7 @@ from fastapi import UploadFile
 from backend.enums import StatusType
 from sqlalchemy import select
 from backend.trans.translation import classify_issue
+from backend.services.duplication import find_duplicate
 
 
 
@@ -16,6 +17,10 @@ async def inputProblems(data: ProblemSchemaInput,
                         photo: UploadFile,
                         db: AsyncSession):
     
+    category = classify_issue(data.description)
+
+    dup = await find_duplicate(data.title, data.description, category, db)
+    
     problem = Problems(
         title= data.title,
         description= data.description,
@@ -23,8 +28,9 @@ async def inputProblems(data: ProblemSchemaInput,
         district=data.district,
         latitude=data.latitude,
         longitude=data.longitude,
-        status=StatusType.submitted,
-        category = classify_issue(data.description)
+        status=StatusType.duplicate if dup else StatusType.submitted,
+        duplicate_problem=dup["duplicate_of_id"] if dup else None,
+        category = category
     )
 
     db.add(problem)
