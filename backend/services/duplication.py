@@ -34,7 +34,7 @@ async def find_duplicate(
         return None
 
     new_text = f"{title} {description}"
-    corpus = [f"{row.title or ''} {row.description}" for row in existing]
+    corpus = [f"{row.description}" for row in existing]
     corpus.append(new_text)
 
     tfid_matrix = vectorizer.fit_transform(corpus)

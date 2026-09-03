@@ -47,6 +47,13 @@ class InstitutionDomain(str, Enum):
     public_administration = "public_administration"
     rural_livelihoods = "rural_livelihoods"
 
+class RoutingStatus(str, Enum):
+    pending = 'pending'
+    accepted = 'accepted'
+    declined = 'declined'
+
+    
+
 
 
  

@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 
-from backend.enums import SubmitterType, StatusType, ProblemCategory
+from backend.enums import SubmitterType, StatusType, ProblemCategory, InstitutionDomain, InstitutionType
 
 class ProblemSchemaInput(BaseModel):
     title: str
@@ -19,6 +19,23 @@ class ProblemSchemaOutput(BaseModel):
     longitude: float
     category: ProblemCategory
     status: StatusType
+
+class Institution(BaseModel):
+    name: str
+    type: InstitutionType
+    domain: InstitutionDomain
+    district: str
+    has_incubation: bool
+
+class InstitutionResponse(BaseModel):
+    id: int
+    name: str
+    type: InstitutionType
+    domain: InstitutionDomain
+    district: str
+    has_incubation: bool
+
+
     
 
 
