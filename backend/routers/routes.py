@@ -73,61 +73,34 @@ from backend.services.classification import (
 router = APIRouter()
 
 
-# --- PROBLEM SUBMISSION ENDPOINTS ---
-@router.post('/PostProblems', response_model=ProblemSchemaOutput)
-@router.post('/problems', response_model=ProblemSchemaOutput)
-async def Problems_endpoint(
-    title: str = Form(...),
-    description: str = Form(...),
-    submitter_type: SubmitterType = Form(...),
-    district: str = Form(...),
-    latitude: float = Form(...),
-    longitude: float = Form(...),
-    submitted_by: int | None = Form(None),
-    photo: UploadFile | None = File(None),
-    db: AsyncSession = Depends(get_db),
-):
-    data = ProblemSchemaInput(
-        title=title,
-        description=description,
-        submitter_type=submitter_type,
-        district=district,
-        latitude=latitude,
-        longitude=longitude,
-        submitted_by=submitted_by,
-    )
-    return await inputProblems(data, photo, db)
+# =====================================================================
+# 1. USERS (Fill First - required for submitters, members, mentors)
+# =====================================================================
+@router.post('/users', response_model=UserResponse, tags=["1. Users"])
+async def create_user_endpoint(data: UserCreate, db: AsyncSession = Depends(get_db)):
+    return await create_user(data, db)
 
 
-@router.get('/problems', response_model=list[ProblemSchemaOutput])
-async def list_problems_endpoint(db: AsyncSession = Depends(get_db)):
-    stmt = select(Problems).order_by(Problems.created_at.desc())
-    res = await db.execute(stmt)
-    return res.scalars().all()
+@router.get('/users', response_model=list[UserResponse], tags=["1. Users"])
+async def list_users_endpoint(db: AsyncSession = Depends(get_db)):
+    return await list_users(db)
 
 
-@router.get('/get_problem/{user_id}', response_model=list[ProblemSchemaOutput])
-@router.get('/problems/user/{user_id}', response_model=list[ProblemSchemaOutput])
-async def get_problem_endpoint(user_id: int, db: AsyncSession = Depends(get_db)):
-    return await getProblems(user_id, db)
+@router.get('/users/{id}', response_model=UserResponse, tags=["1. Users"])
+async def get_user_endpoint(id: int, db: AsyncSession = Depends(get_db)):
+    return await get_user(id, db)
 
 
-@router.get('/problems/{id}', response_model=ProblemSchemaOutput)
-async def get_problem_by_id_endpoint(id: int, db: AsyncSession = Depends(get_db)):
-    problem = await db.get(Problems, id)
-    if not problem:
-        raise HTTPException(status_code=404, detail="Problem not found")
-    return problem
-
-
-# --- INSTITUTION ENDPOINTS ---
-@router.post('/institutions', response_model=InstitutionResponse)
+# =====================================================================
+# 2. INSTITUTIONS (Fill Second - required for routing and partnerships)
+# =====================================================================
+@router.post('/institutions', response_model=InstitutionResponse, tags=["2. Institutions"])
 async def create_institution_json_endpoint(data: Institution, db: AsyncSession = Depends(get_db)):
     return await createYourInstitution(data, db)
 
 
-@router.post('/create_institution', response_model=InstitutionResponse)
-@router.post('/create_instituion', response_model=InstitutionResponse)
+@router.post('/create_institution', response_model=InstitutionResponse, tags=["2. Institutions"])
+@router.post('/create_instituion', response_model=InstitutionResponse, tags=["2. Institutions"])
 async def create_institution_endpoint(
     name: str = Form(...),
     type: InstitutionType = Form(...),
@@ -154,14 +127,14 @@ async def create_institution_endpoint(
     return await createYourInstitution(data, db)
 
 
-@router.get('/institutions', response_model=list[InstitutionResponse])
+@router.get('/institutions', response_model=list[InstitutionResponse], tags=["2. Institutions"])
 async def list_institutions_endpoint(db: AsyncSession = Depends(get_db)):
     stmt = select(Institutions).order_by(Institutions.id.asc())
     res = await db.execute(stmt)
     return res.scalars().all()
 
 
-@router.get('/institutions/{id}', response_model=InstitutionResponse)
+@router.get('/institutions/{id}', response_model=InstitutionResponse, tags=["2. Institutions"])
 async def get_institution_by_id_endpoint(id: int, db: AsyncSession = Depends(get_db)):
     institution = await db.get(Institutions, id)
     if not institution:
@@ -169,52 +142,107 @@ async def get_institution_by_id_endpoint(id: int, db: AsyncSession = Depends(get
     return institution
 
 
-@router.get('/institutions/{id}/problems', response_model=list[RoutedProblemResponse])
+# =====================================================================
+# 3. PROBLEMS & CHALLENGES (Citizen Challenge Submissions)
+# =====================================================================
+@router.post('/problems', response_model=ProblemSchemaOutput, tags=["3. Problems & Challenges"])
+@router.post('/PostProblems', response_model=ProblemSchemaOutput, tags=["3. Problems & Challenges"])
+async def Problems_endpoint(
+    title: str = Form(...),
+    description: str = Form(...),
+    submitter_type: SubmitterType = Form(...),
+    district: str = Form(...),
+    latitude: float = Form(...),
+    longitude: float = Form(...),
+    submitted_by: int | None = Form(None),
+    photo: UploadFile | None = File(None),
+    db: AsyncSession = Depends(get_db),
+):
+    data = ProblemSchemaInput(
+        title=title,
+        description=description,
+        submitter_type=submitter_type,
+        district=district,
+        latitude=latitude,
+        longitude=longitude,
+        submitted_by=submitted_by,
+    )
+    return await inputProblems(data, photo, db)
+
+
+@router.get('/problems', response_model=list[ProblemSchemaOutput], tags=["3. Problems & Challenges"])
+async def list_problems_endpoint(db: AsyncSession = Depends(get_db)):
+    stmt = select(Problems).order_by(Problems.created_at.desc())
+    res = await db.execute(stmt)
+    return res.scalars().all()
+
+
+@router.get('/problems/{id}', response_model=ProblemSchemaOutput, tags=["3. Problems & Challenges"])
+async def get_problem_by_id_endpoint(id: int, db: AsyncSession = Depends(get_db)):
+    problem = await db.get(Problems, id)
+    if not problem:
+        raise HTTPException(status_code=404, detail="Problem not found")
+    return problem
+
+
+@router.get('/problems/user/{user_id}', response_model=list[ProblemSchemaOutput], tags=["3. Problems & Challenges"])
+@router.get('/get_problem/{user_id}', response_model=list[ProblemSchemaOutput], tags=["3. Problems & Challenges"])
+async def get_problem_endpoint(user_id: int, db: AsyncSession = Depends(get_db)):
+    return await getProblems(user_id, db)
+
+
+# =====================================================================
+# 4. INSTITUTION ROUTING (Accept / Decline Challenges)
+# =====================================================================
+@router.get('/institutions/{id}/problems', response_model=list[RoutedProblemResponse], tags=["4. Institution Routing"])
 async def route_institute_endpoint(id: int, db: AsyncSession = Depends(get_db)):
     return await getProblemsForInstitution(id, db)
 
 
-# --- ROUTING ENDPOINTS ---
-@router.post('/routings/{id}/accept')
+@router.post('/routings/{id}/accept', tags=["4. Institution Routing"])
 async def accept_routing_endpoint(id: int, db: AsyncSession = Depends(get_db)):
     return await update_routing_status(id, RoutingStatus.accepted, db)
 
 
-@router.post('/routings/{id}/decline')
+@router.post('/routings/{id}/decline', tags=["4. Institution Routing"])
 async def decline_routing_endpoint(id: int, db: AsyncSession = Depends(get_db)):
     return await update_routing_status(id, RoutingStatus.declined, db)
 
 
-# --- TEAM ENDPOINTS ---
-@router.post('/teams', response_model=TeamResponse)
+# =====================================================================
+# 5. TEAMS (Multidisciplinary Team Formation & Mentorship)
+# =====================================================================
+@router.post('/teams', response_model=TeamResponse, tags=["5. Teams"])
 async def create_team_endpoint(data: TeamCreate, db: AsyncSession = Depends(get_db)):
     return await create_team(data, db)
 
 
-@router.get('/teams', response_model=list[TeamResponse])
+@router.get('/teams', response_model=list[TeamResponse], tags=["5. Teams"])
 async def list_teams_endpoint(db: AsyncSession = Depends(get_db)):
     return await list_teams(db)
 
 
-@router.get('/teams/{id}', response_model=TeamResponse)
+@router.get('/teams/{id}', response_model=TeamResponse, tags=["5. Teams"])
 async def get_team_endpoint(id: int, db: AsyncSession = Depends(get_db)):
     return await get_team(id, db)
 
 
-# --- PROJECT ENDPOINTS ---
-@router.post('/projects', response_model=ProjectResponse)
+# =====================================================================
+# 6. PROJECTS (Solution Proposals, Stages & Approvals)
+# =====================================================================
+@router.post('/projects', response_model=ProjectResponse, tags=["6. Projects"])
 async def create_project_endpoint(data: ProjectCreate, db: AsyncSession = Depends(get_db)):
     return await create_project(data, db)
 
 
-@router.get('/projects', response_model=list[ProjectResponse])
+@router.get('/projects', response_model=list[ProjectResponse], tags=["6. Projects"])
 async def list_projects_endpoint(db: AsyncSession = Depends(get_db)):
     stmt = select(Projects).order_by(Projects.created_at.desc())
     res = await db.execute(stmt)
     return res.scalars().all()
 
 
-@router.get('/projects/{id}', response_model=ProjectResponse)
+@router.get('/projects/{id}', response_model=ProjectResponse, tags=["6. Projects"])
 async def get_project_endpoint(id: int, db: AsyncSession = Depends(get_db)):
     project = await db.get(Projects, id)
     if not project:
@@ -222,34 +250,35 @@ async def get_project_endpoint(id: int, db: AsyncSession = Depends(get_db)):
     return project
 
 
-@router.patch('/projects/{id}/stage', response_model=ProjectResponse)
+@router.patch('/projects/{id}/stage', response_model=ProjectResponse, tags=["6. Projects"])
 async def update_project_stage_endpoint(id: int, data: ProjectStageUpdate, db: AsyncSession = Depends(get_db)):
     return await update_project_stage(id, data.stage, db)
 
 
-@router.patch('/projects/{id}/approve', response_model=ProjectResponse)
+@router.patch('/projects/{id}/approve', response_model=ProjectResponse, tags=["6. Projects"])
 async def approve_project_endpoint(id: int, data: ProjectApprovalUpdate, db: AsyncSession = Depends(get_db)):
     return await approve_project(id, data.approval_status, data.approved_by_user_id, db)
 
 
-# --- MILESTONE ENDPOINTS ---
-@router.post('/projects/{id}/milestones', response_model=MilestoneResponse)
+# =====================================================================
+# 7. MILESTONES & DELIVERABLES (Progress & Proof of Work)
+# =====================================================================
+@router.post('/projects/{id}/milestones', response_model=MilestoneResponse, tags=["7. Milestones & Deliverables"])
 async def add_milestone_endpoint(id: int, data: MilestoneCreate, db: AsyncSession = Depends(get_db)):
     return await add_milestone(id, data, db)
 
 
-@router.get('/projects/{id}/milestones', response_model=list[MilestoneResponse])
+@router.get('/projects/{id}/milestones', response_model=list[MilestoneResponse], tags=["7. Milestones & Deliverables"])
 async def get_project_milestones_endpoint(id: int, db: AsyncSession = Depends(get_db)):
     return await get_project_milestones(id, db)
 
 
-@router.patch('/milestones/{id}/status', response_model=MilestoneResponse)
+@router.patch('/milestones/{id}/status', response_model=MilestoneResponse, tags=["7. Milestones & Deliverables"])
 async def update_milestone_status_endpoint(id: int, data: MilestoneStatusUpdate, db: AsyncSession = Depends(get_db)):
     return await update_milestone_status(id, data.status, db)
 
 
-# --- DELIVERABLES ENDPOINTS ---
-@router.post('/projects/{id}/deliverables', response_model=DeliverableResponse)
+@router.post('/projects/{id}/deliverables', response_model=DeliverableResponse, tags=["7. Milestones & Deliverables"])
 async def upload_deliverable_endpoint(
     id: int,
     doc_type: str = Form(...),
@@ -260,71 +289,63 @@ async def upload_deliverable_endpoint(
     return await add_deliverable(id, milestone_id, doc_type, file, db)
 
 
-@router.get('/projects/{id}/deliverables', response_model=list[DeliverableResponse])
+@router.get('/projects/{id}/deliverables', response_model=list[DeliverableResponse], tags=["7. Milestones & Deliverables"])
 async def get_project_deliverables_endpoint(id: int, db: AsyncSession = Depends(get_db)):
     return await get_project_deliverables(id, db)
 
 
-# --- OUTCOMES ENDPOINTS ---
-@router.post('/projects/{id}/outcomes', response_model=OutcomeResponse)
-async def record_outcomes_endpoint(id: int, data: OutcomeUpsert, db: AsyncSession = Depends(get_db)):
-    return await upsert_project_outcomes(id, data, db)
-
-
-@router.get('/projects/{id}/outcomes', response_model=OutcomeResponse)
-async def get_outcomes_endpoint(id: int, db: AsyncSession = Depends(get_db)):
-    return await get_project_outcomes(id, db)
-
-
-# --- INDUSTRY PARTNERSHIPS ENDPOINTS ---
-@router.post('/projects/{id}/partnerships', response_model=PartnershipResponse)
+# =====================================================================
+# 8. INDUSTRY PARTNERSHIPS (Funding, Mentorship, Tech Transfer)
+# =====================================================================
+@router.post('/projects/{id}/partnerships', response_model=PartnershipResponse, tags=["8. Industry Partnerships"])
 async def request_partnership_endpoint(id: int, data: PartnershipCreate, db: AsyncSession = Depends(get_db)):
     return await request_partnership(id, data, db)
 
 
-@router.patch('/partnerships/{id}/status', response_model=PartnershipResponse)
+@router.patch('/partnerships/{id}/status', response_model=PartnershipResponse, tags=["8. Industry Partnerships"])
 async def update_partnership_status_endpoint(id: int, data: PartnershipStatusUpdate, db: AsyncSession = Depends(get_db)):
     return await update_partnership_status(id, data.status, db)
 
 
-@router.get('/projects/{id}/partnerships', response_model=list[PartnershipResponse])
+@router.get('/projects/{id}/partnerships', response_model=list[PartnershipResponse], tags=["8. Industry Partnerships"])
 async def get_project_partnerships_endpoint(id: int, db: AsyncSession = Depends(get_db)):
     return await get_project_partnerships(id, db)
 
 
-@router.get('/institutions/{id}/partnerships', response_model=list[PartnershipResponse])
+@router.get('/institutions/{id}/partnerships', response_model=list[PartnershipResponse], tags=["8. Industry Partnerships"])
 async def get_institution_partnerships_endpoint(id: int, db: AsyncSession = Depends(get_db)):
     return await get_institution_partnerships(id, db)
 
 
-# --- PROJECT MESSAGES / DISCUSSION ENDPOINTS ---
-@router.post('/projects/{id}/messages', response_model=MessageResponse)
+# =====================================================================
+# 9. OUTCOMES & IP (Patents, Startups, IP Generation)
+# =====================================================================
+@router.post('/projects/{id}/outcomes', response_model=OutcomeResponse, tags=["9. Outcomes & IP"])
+async def record_outcomes_endpoint(id: int, data: OutcomeUpsert, db: AsyncSession = Depends(get_db)):
+    return await upsert_project_outcomes(id, data, db)
+
+
+@router.get('/projects/{id}/outcomes', response_model=OutcomeResponse, tags=["9. Outcomes & IP"])
+async def get_outcomes_endpoint(id: int, db: AsyncSession = Depends(get_db)):
+    return await get_project_outcomes(id, db)
+
+
+# =====================================================================
+# 10. MESSAGES & DISCUSSION (Threaded Messages)
+# =====================================================================
+@router.post('/projects/{id}/messages', response_model=MessageResponse, tags=["10. Messages & Discussion"])
 async def post_project_message_endpoint(id: int, data: MessageCreate, db: AsyncSession = Depends(get_db)):
     return await add_project_message(id, data, db)
 
 
-@router.get('/projects/{id}/messages', response_model=list[MessageResponse])
+@router.get('/projects/{id}/messages', response_model=list[MessageResponse], tags=["10. Messages & Discussion"])
 async def get_project_messages_endpoint(id: int, db: AsyncSession = Depends(get_db)):
     return await get_project_messages(id, db)
 
 
-# --- DASHBOARD ENDPOINT ---
-@router.get('/dashboard', response_model=DashboardStats)
+# =====================================================================
+# 11. DASHBOARD & ANALYTICS
+# =====================================================================
+@router.get('/dashboard', response_model=DashboardStats, tags=["11. Dashboard & Analytics"])
 async def get_dashboard_endpoint(db: AsyncSession = Depends(get_db)):
     return await get_dashboard_summary(db)
-
-
-# --- USER ENDPOINTS ---
-@router.post('/users', response_model=UserResponse)
-async def create_user_endpoint(data: UserCreate, db: AsyncSession = Depends(get_db)):
-    return await create_user(data, db)
-
-
-@router.get('/users', response_model=list[UserResponse])
-async def list_users_endpoint(db: AsyncSession = Depends(get_db)):
-    return await list_users(db)
-
-
-@router.get('/users/{id}', response_model=UserResponse)
-async def get_user_endpoint(id: int, db: AsyncSession = Depends(get_db)):
-    return await get_user(id, db)
