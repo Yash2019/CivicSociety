@@ -13,12 +13,15 @@ from backend.enums import (
     MilestoneStatus,
     PartnershipType,
     PartnershipStatus,
+    UserRole,
+    DeliverableDocType,
 )
 
 class ProblemSchemaInput(BaseModel):
     title: str
     description: str
-    submitter_type: SubmitterType
+    submitter_type: SubmitterType = SubmitterType.individual
+    category: ProblemCategory | None = None
     district: str
     latitude: float
     longitude: float
@@ -57,11 +60,11 @@ class RoutedProblemResponse(BaseModel):
 
 class Institution(BaseModel):
     name: str
-    type: InstitutionType
+    type: InstitutionType = InstitutionType.university
     domain: InstitutionDomain | None = None
-    domains: list[str] = []
+    domains: list[InstitutionDomain] = []
     district: str
-    has_incubation: bool
+    has_incubation: bool = False
 
 class InstitutionResponse(BaseModel):
     id: int
@@ -211,7 +214,7 @@ class DashboardStats(BaseModel):
 class UserCreate(BaseModel):
     name: str
     email: str
-    role: str = "citizen"
+    role: UserRole = UserRole.citizen
     institution_id: int | None = None
 
     @field_validator("institution_id", mode="before")

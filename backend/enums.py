@@ -82,5 +82,22 @@ class PartnershipStatus(str, Enum):
     declined = "declined"
 
 
+class UserRole(str, Enum):
+    citizen = "citizen"
+    student = "student"
+    faculty = "faculty"
+    pri = "pri"
+    ulb = "ulb"
+    govt_dept = "govt_dept"
+    industry = "industry"
+    gov_admin = "gov_admin"
 
- 
+
+class DeliverableDocType(str, Enum):
+    test_report = "test_report"
+    validation_report = "validation_report"
+    cad_model = "cad_model"
+    source_code = "source_code"
+    research_paper = "research_paper"
+    presentation = "presentation"
+    other = "other"

@@ -62,7 +62,7 @@ async def inputProblems(data: ProblemSchemaInput,
                         photo: UploadFile | None,
                         db: AsyncSession):
     
-    category = classify_issue(data.description)
+    category = data.category if data.category else classify_issue(data.description)
 
     dup = await find_duplicate(data.title, data.description, category, db)
     

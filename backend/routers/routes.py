@@ -8,6 +8,9 @@ from backend.enums import (
     InstitutionDomain,
     InstitutionType,
     RoutingStatus,
+    ProblemCategory,
+    DeliverableDocType,
+    UserRole,
 )
 from backend.Models.projects_db import Projects
 from backend.Models.institutions import Institutions
@@ -104,28 +107,29 @@ async def create_institution_json_endpoint(data: Institution, db: AsyncSession =
 @router.post('/create_instituion', response_model=InstitutionResponse, tags=["2. Institutions"])
 async def create_institution_endpoint(
     name: str = Form(...),
-    type: InstitutionType = Form(...),
+    type: InstitutionType = Form(InstitutionType.university),
     domain: InstitutionDomain | None = Form(None),
     domains: str | None = Form(None),
     district: str = Form(...),
-    has_incubation: bool = Form(...),
+    has_incubation: bool = Form(False),
     db: AsyncSession = Depends(get_db),
 ):
     parsed_domains = []
     if domains:
         parsed_domains = [d.strip() for d in domains.split(",") if d.strip()]
     elif domain:
-        parsed_domains = [domain.value]
+        parsed_domains = [domain.value if hasattr(domain, "value") else str(domain)]
 
     data = Institution(
         name=name,
         type=type,
         domain=domain,
-        domains=parsed_domains,
+        domains=[InstitutionDomain(d) for d in parsed_domains if d in [e.value for e in InstitutionDomain]],
         district=district,
         has_incubation=has_incubation,
     )
     return await createYourInstitution(data, db)
+
 
 
 @router.get('/institutions', response_model=list[InstitutionResponse], tags=["2. Institutions"])
@@ -151,7 +155,8 @@ async def get_institution_by_id_endpoint(id: int, db: AsyncSession = Depends(get
 async def Problems_endpoint(
     title: str = Form(...),
     description: str = Form(...),
-    submitter_type: SubmitterType = Form(...),
+    submitter_type: SubmitterType = Form(SubmitterType.individual),
+    category: ProblemCategory | None = Form(None),
     district: str = Form(...),
     latitude: float = Form(...),
     longitude: float = Form(...),
@@ -163,12 +168,14 @@ async def Problems_endpoint(
         title=title,
         description=description,
         submitter_type=submitter_type,
+        category=category,
         district=district,
         latitude=latitude,
         longitude=longitude,
         submitted_by=submitted_by,
     )
     return await inputProblems(data, photo, db)
+
 
 
 @router.get('/problems', response_model=list[ProblemSchemaOutput], tags=["3. Problems & Challenges"])
@@ -282,12 +289,14 @@ async def update_milestone_status_endpoint(id: int, data: MilestoneStatusUpdate,
 @router.post('/projects/{id}/deliverables', response_model=DeliverableResponse, tags=["7. Milestones & Deliverables"])
 async def upload_deliverable_endpoint(
     id: int,
-    doc_type: str = Form(...),
+    doc_type: DeliverableDocType = Form(DeliverableDocType.test_report),
     milestone_id: int | None = Form(None),
     file: UploadFile = File(...),
     db: AsyncSession = Depends(get_db),
 ):
-    return await add_deliverable(id, milestone_id, doc_type, file, db)
+    doc_val = doc_type.value if hasattr(doc_type, "value") else str(doc_type)
+    return await add_deliverable(id, milestone_id, doc_val, file, db)
+
 
 
 @router.get('/projects/{id}/deliverables', response_model=list[DeliverableResponse], tags=["7. Milestones & Deliverables"])
