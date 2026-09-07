@@ -70,17 +70,18 @@ async def inputProblems(data: ProblemSchemaInput,
     submitter_key = getattr(data.submitter_type, "value", str(data.submitter_type))
     priority = compute_priority_score(submitter_key, has_media=has_photo)
 
-    if data.submitted_by:
-        sub_user = await db.get(Users, data.submitted_by)
+    submitted_by = data.submitted_by if data.submitted_by and data.submitted_by > 0 else None
+    if submitted_by:
+        sub_user = await db.get(Users, submitted_by)
         if not sub_user:
-            raise HTTPException(status_code=404, detail=f"User {data.submitted_by} not found")
+            raise HTTPException(status_code=404, detail=f"User {submitted_by} not found")
 
     problem = Problems(
         title=data.title,
         description=data.description,
         priority_score=priority,
         submitter_type=data.submitter_type,
-        submitted_by=data.submitted_by,
+        submitted_by=submitted_by,
         district=data.district,
         latitude=data.latitude,
         longitude=data.longitude,
@@ -453,8 +454,9 @@ async def add_deliverable(project_id: int, milestone_id: int | None, doc_type: s
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    if milestone_id is not None:
-        milestone = await db.get(Milestones, milestone_id)
+    valid_milestone_id = milestone_id if milestone_id and milestone_id > 0 else None
+    if valid_milestone_id is not None:
+        milestone = await db.get(Milestones, valid_milestone_id)
         if not milestone or milestone.project_id != project_id:
             raise HTTPException(status_code=400, detail="Milestone does not belong to this project")
 
@@ -466,7 +468,7 @@ async def add_deliverable(project_id: int, milestone_id: int | None, doc_type: s
 
     deliverable = Deliverables(
         project_id=project_id,
-        milestone_id=milestone_id,
+        milestone_id=valid_milestone_id,
         file_url=str(file_path),
         doc_type=doc_type
     )
@@ -677,8 +679,9 @@ async def create_user(data: UserCreate, db: AsyncSession):
     if existing:
         raise HTTPException(status_code=400, detail="User with this email already exists")
 
-    if data.institution_id:
-        inst = await db.get(Institutions, data.institution_id)
+    institution_id = data.institution_id if data.institution_id and data.institution_id > 0 else None
+    if institution_id:
+        inst = await db.get(Institutions, institution_id)
         if not inst:
             raise HTTPException(status_code=404, detail="Institution not found")
 
@@ -686,7 +689,7 @@ async def create_user(data: UserCreate, db: AsyncSession):
         name=data.name,
         email=data.email,
         role=data.role,
-        institution_id=data.institution_id
+        institution_id=institution_id
     )
     db.add(new_user)
     await db.commit()

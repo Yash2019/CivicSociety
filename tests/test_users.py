@@ -57,3 +57,13 @@ def test_create_user_invalid_institution(client):
         'institution_id': 99999999
     })
     assert response.status_code == 404
+
+def test_create_user_with_zero_institution_id(client):
+    response = client.post('/users', json={
+        'name': 'Swagger Default User',
+        'email': f'swagger_{uuid.uuid4().hex[:8]}@example.com',
+        'role': 'citizen',
+        'institution_id': 0
+    })
+    assert response.status_code == 200
+    assert response.json()['institution_id'] is None

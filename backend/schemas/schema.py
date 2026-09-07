@@ -1,5 +1,5 @@
 from datetime import datetime, date
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
 
 from backend.enums import (
     SubmitterType,
@@ -23,6 +23,13 @@ class ProblemSchemaInput(BaseModel):
     latitude: float
     longitude: float
     submitted_by: int | None = None
+
+    @field_validator("submitted_by", mode="before")
+    @classmethod
+    def sanitize_submitted_by(cls, v):
+        if v is not None and (v == 0 or v == "" or (isinstance(v, int) and v <= 0)):
+            return None
+        return v
 
 class ProblemSchemaOutput(BaseModel):
     id: int
@@ -206,6 +213,13 @@ class UserCreate(BaseModel):
     email: str
     role: str = "citizen"
     institution_id: int | None = None
+
+    @field_validator("institution_id", mode="before")
+    @classmethod
+    def sanitize_institution_id(cls, v):
+        if v is not None and (v == 0 or v == "" or (isinstance(v, int) and v <= 0)):
+            return None
+        return v
 
 class UserResponse(BaseModel):
     id: int
