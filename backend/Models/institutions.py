@@ -35,7 +35,7 @@ class Routings(Base):
 
     status: Mapped[RoutingStatus] = mapped_column(
         SQLEnum(RoutingStatus),
-        default=RoutingStatus.accepted
+        default=RoutingStatus.pending
     )
 
     created_at: Mapped[datetime] = mapped_column(

@@ -52,7 +52,34 @@ class RoutingStatus(str, Enum):
     accepted = 'accepted'
     declined = 'declined'
 
-    
+
+class ProjectStage(str, Enum):
+    proposed = "proposed"
+    active = "active"
+    testing = "testing"
+    deployed = "deployed"
+    completed = "completed"
+
+class ApprovalStatus(str, Enum):
+    pending = "pending"
+    approved = "approved"
+    rejected = "rejected"
+
+class MilestoneStatus(str, Enum):
+    pending = "pending"
+    in_progress = "in_progress"
+    completed = "completed"
+
+class PartnershipType(str, Enum):
+    mentorship = "mentorship"
+    funding = "funding"
+    prototyping = "prototyping"
+    technology_transfer = "technology_transfer"
+
+class PartnershipStatus(str, Enum):
+    requested = "requested"
+    accepted = "accepted"
+    declined = "declined"
 
 
 

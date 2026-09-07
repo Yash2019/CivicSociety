@@ -14,6 +14,14 @@ from backend.services.duplication import find_duplicate
 
 UPLOAD_DIR = Path("backend/media")
 
+SUBMITTER_WEIGHTS = {
+    "govt_dept": 90,
+    "ulb": 85,
+    "pri": 80,
+    "community_org": 65,
+    "individual": 50,
+}
+
 async def inputProblems(data: ProblemSchemaInput, 
                         photo: UploadFile,
                         db: AsyncSession):
@@ -22,22 +30,27 @@ async def inputProblems(data: ProblemSchemaInput,
 
     dup = await find_duplicate(data.title, data.description, category, db)
     
+    submitter_key = getattr(data.submitter_type, "value", str(data.submitter_type))
+    priority = SUBMITTER_WEIGHTS.get(submitter_key, 50) + 10
+
     problem = Problems(
-        title= data.title,
-        description= data.description,
-        submitter_type= data.submitter_type,
+        title=data.title,
+        description=data.description,
+        priority_score=priority,
+        submitter_type=data.submitter_type,
         district=data.district,
         latitude=data.latitude,
         longitude=data.longitude,
         status=StatusType.duplicate if dup else StatusType.submitted,
         duplicate_problem=dup["duplicate_of_id"] if dup else None,
-        category = category
+        category=category
     )
 
     db.add(problem)
     await db.flush()
 
-    await routeProblemtoInstitute(problem.id, db)
+    if not dup:
+        await routeProblemtoInstitute(problem.id, db)
 
     UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
     file_path = UPLOAD_DIR / f"{problem.id}_{photo.filename}"
@@ -48,7 +61,7 @@ async def inputProblems(data: ProblemSchemaInput,
     media = ProblemMedia(
         problem_id=problem.id,
         file_url=str(file_path),
-        file_type=photo.content_type
+        file_type=photo.content_type or "application/octet-stream"
     )
 
     db.add(media)
@@ -59,24 +72,22 @@ async def inputProblems(data: ProblemSchemaInput,
     return problem
 
 async def getProblems(user_id: int, db: AsyncSession):
-    user_problem = select(Problems).where(Problems.id == user_id)
+    user_problem = select(Problems).where(Problems.submitted_by == user_id)
     result = await db.execute(user_problem)
-
-    prob = result.scalar_one_or_none()
-    return prob
+    return result.scalars().all()
 
 async def createYourInstitution(data:Institution, db: AsyncSession):
     create_ins = Institutions(
-        name = data.name,
-        type = data.type,
-        domain = data.domain,
-        district = data.district,
-        has_incubation = data.has_incubation
-
+        name=data.name,
+        type=data.type,
+        domain=data.domain,
+        district=data.district,
+        has_incubation=data.has_incubation
     )
 
     db.add(create_ins)
     await db.commit()
+    await db.refresh(create_ins)
 
     return create_ins
 
@@ -91,16 +102,15 @@ async def routeProblemtoInstitute(problem_id: int, db: AsyncSession):
     result = await db.execute(stmt)
     institutions = result.scalars().all()
 
-
     for inst in institutions:
         routing = Routings(
             problems_id=problem.id,
             institution_id=inst.id,
-            matched_reason = "domain_matched"
+            matched_reason="domain_matched"
         )
-
         db.add(routing)
-        await db.commit()
+
+    await db.flush()
 
 async def getProblemsForInstitution(institution_id: int, db: AsyncSession):
 
@@ -108,11 +118,11 @@ async def getProblemsForInstitution(institution_id: int, db: AsyncSession):
     result = await db.execute(stmt)
     problem_ids = result.scalars().all()
     if not problem_ids:
-        return None
-
+        return []
 
     stmt = select(Problems).where(Problems.id.in_(problem_ids))
     result = await db.execute(stmt)
     return result.scalars().all()
+
     
 

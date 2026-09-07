@@ -32,12 +32,14 @@ async def Problems_endpoint(
 
     return await inputProblems(data, photo, db)
 
-@router.get('/get_problem{user_id}', response_model=ProblemSchemaOutput)
+@router.get('/get_problem/{user_id}', response_model=list[ProblemSchemaOutput])
+@router.get('/problems/user/{user_id}', response_model=list[ProblemSchemaOutput])
 async def get_problem_endpoint(user_id: int, db: AsyncSession = Depends(get_db)):
     return await getProblems(user_id, db)
 
+@router.post('/create_institution', response_model=InstitutionResponse)
 @router.post('/create_instituion', response_model=InstitutionResponse)
-async def create_instition_endpoint(
+async def create_institution_endpoint(
     name: str = Form(...),
     type: InstitutionType = Form(...),
     domain: InstitutionDomain = Form(...),
@@ -54,6 +56,6 @@ async def create_instition_endpoint(
     )
     return await createYourInstitution(data, db)
 
-@router.get('/institutions/{id}/problems', response_model=list[ProblemSchemaInput])
+@router.get('/institutions/{id}/problems', response_model=list[ProblemSchemaOutput])
 async def route_institute_endpoint(id: int, db: AsyncSession = Depends(get_db)):
     return await getProblemsForInstitution(id, db)

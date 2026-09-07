@@ -1,0 +1,16 @@
+from datetime import datetime, date
+from sqlalchemy.orm import Mapped, mapped_column, DeclarativeBase
+from sqlalchemy import ForeignKey, DateTime, Date, func, String, Text, Integer, Boolean
+from sqlalchemy import Enum as SQLEnum
+
+
+class ProjectOutcomes(Base):
+    __tablename__ = "project_outcomes"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"), unique=True, nullable=False)
+    patents_filed: Mapped[int] = mapped_column(Integer, default=0)
+    startups_created: Mapped[int] = mapped_column(Integer, default=0)
+    ip_generated: Mapped[str | None] = mapped_column(Text, nullable=True)
+    impact_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
