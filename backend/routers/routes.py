@@ -11,6 +11,7 @@ from backend.enums import (
 )
 from backend.Models.projects_db import Projects
 from backend.Models.institutions import Institutions
+from backend.Models.problems_db import Problems
 from backend.schemas.schema import (
     ProblemSchemaInput,
     ProblemSchemaOutput,
@@ -74,6 +75,7 @@ router = APIRouter()
 
 # --- PROBLEM SUBMISSION ENDPOINTS ---
 @router.post('/PostProblems', response_model=ProblemSchemaOutput)
+@router.post('/problems', response_model=ProblemSchemaOutput)
 async def Problems_endpoint(
     title: str = Form(...),
     description: str = Form(...),
@@ -154,7 +156,7 @@ async def create_institution_endpoint(
 
 @router.get('/institutions', response_model=list[InstitutionResponse])
 async def list_institutions_endpoint(db: AsyncSession = Depends(get_db)):
-    stmt = select(Institutions)
+    stmt = select(Institutions).order_by(Institutions.id.asc())
     res = await db.execute(stmt)
     return res.scalars().all()
 
@@ -207,7 +209,7 @@ async def create_project_endpoint(data: ProjectCreate, db: AsyncSession = Depend
 
 @router.get('/projects', response_model=list[ProjectResponse])
 async def list_projects_endpoint(db: AsyncSession = Depends(get_db)):
-    stmt = select(Projects)
+    stmt = select(Projects).order_by(Projects.created_at.desc())
     res = await db.execute(stmt)
     return res.scalars().all()
 

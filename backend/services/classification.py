@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from fastapi import UploadFile, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -97,7 +97,7 @@ async def inputProblems(data: ProblemSchemaInput,
 
     if has_photo and photo is not None:
         UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-        filename = photo.filename or f"photo_{int(datetime.utcnow().timestamp())}.bin"
+        filename = photo.filename or f"photo_{int(datetime.now(timezone.utc).timestamp())}.bin"
         file_path = UPLOAD_DIR / f"{problem.id}_{filename}"
 
         with file_path.open("wb") as buffer:
@@ -383,7 +383,7 @@ async def update_milestone_status(milestone_id: int, status: MilestoneStatus, db
         raise HTTPException(status_code=404, detail="Milestone not found")
     milestone.status = status
     if status == MilestoneStatus.completed:
-        milestone.completed_at = datetime.utcnow()
+        milestone.completed_at = datetime.now(timezone.utc)
     await db.commit()
     await db.refresh(milestone)
     return milestone
@@ -459,7 +459,7 @@ async def add_deliverable(project_id: int, milestone_id: int | None, doc_type: s
             raise HTTPException(status_code=400, detail="Milestone does not belong to this project")
 
     UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-    filename = file.filename or f"deliverable_{int(datetime.utcnow().timestamp())}.bin"
+    filename = file.filename or f"deliverable_{int(datetime.now(timezone.utc).timestamp())}.bin"
     file_path = UPLOAD_DIR / f"deliverable_{project_id}_{filename}"
     with file_path.open("wb") as buffer:
         buffer.write(await file.read())

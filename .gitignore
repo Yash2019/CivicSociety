@@ -2,3 +2,6 @@
 __pycache__
 plan.md
 PROTOTYPE_BLUEPRINT.py
+.pytest_cache/
+backend/media/*test*
+backend/media/deliverable_*_validation_report*

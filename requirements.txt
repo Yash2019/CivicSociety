@@ -34,3 +34,4 @@ redis[hiredis]
 httpx
 fastapi[standard]
 celery
+scikit-learn
