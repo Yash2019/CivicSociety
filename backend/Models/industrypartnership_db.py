@@ -1,7 +1,9 @@
-from datetime import datetime, date
-from sqlalchemy.orm import Mapped, mapped_column, DeclarativeBase
-from sqlalchemy import ForeignKey, DateTime, Date, func, String, Text, Integer, Boolean
+from datetime import datetime
+from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import ForeignKey, DateTime, func, Text
 from sqlalchemy import Enum as SQLEnum
+from backend.db.db import Base
+from backend.enums import PartnershipType, PartnershipStatus
 
 
 class IndustryPartnerships(Base):

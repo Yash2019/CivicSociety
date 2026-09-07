@@ -21,5 +21,6 @@ async def get_db():
         yield db
 
 async def create_table():
+    import backend.Models  # noqa: F401
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)

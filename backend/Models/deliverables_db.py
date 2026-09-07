@@ -1,7 +1,7 @@
-from datetime import datetime, date
-from sqlalchemy.orm import Mapped, mapped_column, DeclarativeBase
-from sqlalchemy import ForeignKey, DateTime, Date, func, String, Text, Integer, Boolean
-from sqlalchemy import Enum as SQLEnum
+from datetime import datetime
+from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import ForeignKey, DateTime, func, String
+from backend.db.db import Base
 
 
 class Deliverables(Base):
