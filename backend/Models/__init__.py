@@ -7,6 +7,7 @@ from backend.Models.milestones_db import Milestones
 from backend.Models.deliverables_db import Deliverables
 from backend.Models.projectoutcome_db import ProjectOutcomes
 from backend.Models.industrypartnership_db import IndustryPartnerships
+from backend.Models.messages_db import Messages
 
 __all__ = [
     "Users",
@@ -21,4 +22,5 @@ __all__ = [
     "Deliverables",
     "ProjectOutcomes",
     "IndustryPartnerships",
+    "Messages",
 ]

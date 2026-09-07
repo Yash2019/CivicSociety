@@ -22,6 +22,7 @@ class ProblemSchemaInput(BaseModel):
     district: str
     latitude: float
     longitude: float
+    submitted_by: int | None = None
 
 class ProblemSchemaOutput(BaseModel):
     id: int
@@ -35,13 +36,23 @@ class ProblemSchemaOutput(BaseModel):
     category: ProblemCategory | None = None
     status: StatusType | None = None
     duplicate_problem: int | None = None
+    submitted_by: int | None = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+class RoutedProblemResponse(BaseModel):
+    routing_id: int
+    routing_status: RoutingStatus
+    matched_reason: str
+    problem: ProblemSchemaOutput
 
     model_config = ConfigDict(from_attributes=True)
 
 class Institution(BaseModel):
     name: str
     type: InstitutionType
-    domain: InstitutionDomain
+    domain: InstitutionDomain | None = None
+    domains: list[str] = []
     district: str
     has_incubation: bool
 
@@ -49,7 +60,8 @@ class InstitutionResponse(BaseModel):
     id: int
     name: str
     type: InstitutionType
-    domain: InstitutionDomain
+    domain: InstitutionDomain | None = None
+    domains: list[str] = []
     district: str
     has_incubation: bool
 
@@ -148,10 +160,6 @@ class PartnershipResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 # --- Deliverables Schemas ---
-class DeliverableCreate(BaseModel):
-    milestone_id: int | None = None
-    doc_type: str
-
 class DeliverableResponse(BaseModel):
     id: int
     project_id: int
@@ -161,18 +169,36 @@ class DeliverableResponse(BaseModel):
     created_at: datetime
     model_config = ConfigDict(from_attributes=True)
 
-# --- Routing Schemas ---
-class RoutingStatusUpdate(BaseModel):
-    status: RoutingStatus
+# --- Message Schemas ---
+class MessageCreate(BaseModel):
+    sender_user_id: int
+    message_text: str
 
-class RoutingResponse(BaseModel):
+class MessageResponse(BaseModel):
     id: int
-    problems_id: int
-    institution_id: int
-    matched_reason: str
-    status: RoutingStatus
+    project_id: int
+    sender_user_id: int
+    sender_name: str | None = None
+    message_text: str
     created_at: datetime
     model_config = ConfigDict(from_attributes=True)
+
+# --- Dashboard Summary Schema ---
+class DashboardStats(BaseModel):
+    total_problems: int
+    problems_by_status: dict[str, int]
+    problems_by_category: dict[str, int]
+    problems_by_district: dict[str, int]
+    problems_by_submitter_type: dict[str, int]
+    total_projects: int
+    projects_by_stage: dict[str, int]
+    completion_rate: float
+    total_patents: int
+    total_startups: int
+    active_industry_partnerships: int
+    partnerships_by_type: dict[str, int]
+    participating_institutions_count: int
+
 
 # --- User Schemas ---
 class UserCreate(BaseModel):
@@ -186,19 +212,7 @@ class UserResponse(BaseModel):
     name: str
     email: str
     role: str
-    institution_id: int | None
+    institution_id: int | None = None
     created_at: datetime
     model_config = ConfigDict(from_attributes=True)
-
-# --- Dashboard Summary Schema ---
-class DashboardStats(BaseModel):
-    total_problems: int
-    problems_by_status: dict[str, int]
-    problems_by_category: dict[str, int]
-    problems_by_district: dict[str, int]
-    total_projects: int
-    projects_by_stage: dict[str, int]
-    total_patents: int
-    total_startups: int
-    active_industry_partnerships: int
 

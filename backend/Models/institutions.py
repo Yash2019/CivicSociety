@@ -1,7 +1,8 @@
 from backend.db.db import Base
 from sqlalchemy.orm import Mapped, mapped_column
 from backend.enums import InstitutionType, InstitutionDomain, RoutingStatus
-from sqlalchemy import Enum as SQLEnum, func, ForeignKey
+from sqlalchemy import Enum as SQLEnum, func, ForeignKey, String
+from sqlalchemy.dialects.postgresql import ARRAY
 from datetime import datetime
 
 class Institutions(Base):
@@ -14,8 +15,15 @@ class Institutions(Base):
         SQLEnum(InstitutionType)
     )
 
-    domain: Mapped[InstitutionDomain] = mapped_column(
-        SQLEnum(InstitutionDomain)
+    domain: Mapped[InstitutionDomain | None] = mapped_column(
+        SQLEnum(InstitutionDomain),
+        nullable=True
+    )
+
+    domains: Mapped[list[str] | None] = mapped_column(
+        ARRAY(String),
+        nullable=True,
+        default=list
     )
 
     district: Mapped[str] = mapped_column()

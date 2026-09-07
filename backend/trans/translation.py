@@ -175,22 +175,28 @@ EXAMPLES:
 """
 
 
-tokenizer = AutoTokenizer.from_pretrained(
-    MODEL_NAME,
-    local_files_only=True,
-)
+_tokenizer = None
+_model = None
 
-model = AutoModelForCausalLM.from_pretrained(
-    MODEL_NAME,
-    dtype=torch.float16,
-    device_map="auto",
-    local_files_only=True,
-)
-
-model.eval()
+def get_model_and_tokenizer():
+    global _tokenizer, _model
+    if _tokenizer is None or _model is None:
+        _tokenizer = AutoTokenizer.from_pretrained(
+            MODEL_NAME,
+            local_files_only=True,
+        )
+        _model = AutoModelForCausalLM.from_pretrained(
+            MODEL_NAME,
+            dtype=torch.float16,
+            device_map="auto",
+            local_files_only=True,
+        )
+        _model.eval()
+    return _model, _tokenizer
 
 
 def _generate(text: str) -> str:
+    model, tokenizer = get_model_and_tokenizer()
     messages = [
         {
             "role": "system",
