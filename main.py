@@ -80,4 +80,15 @@ app.add_middleware(
 # Mount media directory for previewing uploaded photos and deliverables
 app.mount("/media", StaticFiles(directory="backend/media"), name="media")
 
-app.include_router(router)
+from fastapi.responses import JSONResponse
+from sqlalchemy.exc import IntegrityError
+
+@app.exception_handler(IntegrityError)
+async def integrity_exception_handler(request, exc: IntegrityError):
+    detail = str(exc.orig) if hasattr(exc, "orig") else str(exc)
+    return JSONResponse(
+        status_code=400,
+        content={"detail": f"Database constraint error (check IDs provided): {detail}"}
+    )
+
+app.include_router(router)

@@ -69,6 +69,7 @@ from backend.services.classification import (
     get_user,
     list_users,
 )
+from backend.seed import seed_data
 
 router = APIRouter()
 
@@ -349,3 +350,9 @@ async def get_project_messages_endpoint(id: int, db: AsyncSession = Depends(get_
 @router.get('/dashboard', response_model=DashboardStats, tags=["11. Dashboard & Analytics"])
 async def get_dashboard_endpoint(db: AsyncSession = Depends(get_db)):
     return await get_dashboard_summary(db)
+
+
+@router.post('/seed', tags=["11. Dashboard & Analytics"])
+async def seed_database_endpoint(force: bool = False):
+    """Populate database with complete, realistic demo records across all entities in 1 click."""
+    return await seed_data(force=force)

@@ -237,7 +237,8 @@ async def create_team(data: TeamCreate, db: AsyncSession):
     if not mentor:
         raise HTTPException(status_code=404, detail="Faculty mentor user not found")
 
-    for user_id in data.member_user_ids:
+    valid_member_ids = [uid for uid in data.member_user_ids if uid and uid > 0]
+    for user_id in valid_member_ids:
         member_user = await db.get(Users, user_id)
         if not member_user:
             raise HTTPException(status_code=404, detail=f"Member user {user_id} not found")
@@ -250,7 +251,7 @@ async def create_team(data: TeamCreate, db: AsyncSession):
     db.add(new_team)
     await db.flush()
 
-    for user_id in data.member_user_ids:
+    for user_id in valid_member_ids:
         member = TeamMember(team_id=new_team.id, user_id=user_id)
         db.add(member)
 
@@ -261,7 +262,7 @@ async def create_team(data: TeamCreate, db: AsyncSession):
         "problem_id": new_team.problem_id,
         "institution_id": new_team.institution_id,
         "faculty_mentor_id": new_team.faculty_mentor_id,
-        "member_user_ids": data.member_user_ids
+        "member_user_ids": valid_member_ids
     }
 
 

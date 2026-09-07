@@ -29,14 +29,15 @@ from backend.enums import (
     PartnershipStatus,
 )
 
-async def seed_data():
+async def seed_data(force: bool = False):
     await create_table()
     async with SessionLocal() as db:
         # Check if already seeded
-        existing_users = await db.scalar(select(Users.id).limit(1))
-        if existing_users:
-            print("Database already contains data. Skipping seed.")
-            return
+        if not force:
+            existing_users = await db.scalar(select(Users.id).limit(1))
+            if existing_users:
+                print("Database already contains data. Skipping seed.")
+                return {"status": "skipped", "message": "Database already contains data. Use force=True to re-seed."}
 
         print("Seeding users...")
         users = [
@@ -192,6 +193,7 @@ async def seed_data():
 
         await db.commit()
         print("Database seeded successfully!")
+        return {"status": "success", "message": "Database seeded successfully with realistic demo data!"}
 
 if __name__ == "__main__":
     asyncio.run(seed_data())
