@@ -31,6 +31,8 @@ export interface Outcome { id: number; project_id: number; patents_filed: number
 export interface Partnership { id: number; project_id: number; industry_institution_id: number; partnership_type: string; status: string; notes: string | null; created_at: string; }
 export interface Message { id: number; project_id: number; sender_user_id: number; sender_name: string | null; message_text: string; created_at: string; }
 export interface Dashboard { total_problems: number; problems_by_status: Record<string, number>; problems_by_category: Record<string, number>; problems_by_district: Record<string, number>; problems_by_submitter_type: Record<string, number>; total_projects: number; projects_by_stage: Record<string, number>; completion_rate: number; total_patents: number; total_startups: number; active_industry_partnerships: number; partnerships_by_type: Record<string, number>; participating_institutions_count: number; }
+export interface User { id: number; name: string; email: string; role: string; institution_id: number | null; }
+export interface Team { id: number; problem_id: number; institution_id: number; faculty_mentor_id: number; member_user_ids: number[]; }
 
 export const api = {
   baseUrl: API_BASE_URL,
@@ -50,4 +52,8 @@ export const api = {
   declineRouting: (id: number) => request<Routing>(`/routings/${id}/decline`, { method: 'POST' }),
   approveProject: (id: number, approval_status: 'approved' | 'rejected', approved_by_user_id: number) => request<Project>(`/projects/${id}/approve`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ approval_status, approved_by_user_id }) }),
   dashboard: () => request<Dashboard>('/dashboard'),
+  users: () => request<User[]>('/users'),
+  teams: () => request<Team[]>('/teams'),
+  createTeam: (data: Json) => request<Team>('/teams', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }),
+  createProject: (data: Json) => request<Project>('/projects', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }),
 };
