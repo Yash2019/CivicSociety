@@ -1,4 +1,11 @@
-const API_BASE_URL = (import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000').replace(/\/$/, '');
+const configuredApiUrl = String(import.meta.env.VITE_API_URL || '').trim();
+const API_BASE_URL = (
+  configuredApiUrl
+    ? (/^https?:\/\//i.test(configuredApiUrl) ? configuredApiUrl : `https://${configuredApiUrl}`)
+    : (typeof window !== 'undefined' && !['localhost', '127.0.0.1'].includes(window.location.hostname)
+      ? window.location.origin
+      : 'http://127.0.0.1:8000')
+).replace(/\/$/, '');
 
 export type Json = Record<string, unknown>;
 

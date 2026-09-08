@@ -16,6 +16,22 @@ services:
       - key: GEMINI_API_KEY
         sync: false
 
+  - type: static
+    name: civic-society-frontend
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_API_URL
+        fromService:
+          type: web
+          name: civic-society-backend
+          property: host
+
 databases:
   - name: civic-society-db
     databaseName: civic_society

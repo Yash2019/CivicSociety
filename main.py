@@ -82,7 +82,7 @@ app.add_middleware(
 # Mount media directory for previewing uploaded photos and deliverables
 app.mount("/media", StaticFiles(directory=str(MEDIA_DIR)), name="media")
 
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
 from sqlalchemy.exc import IntegrityError
 
 @app.exception_handler(IntegrityError)
@@ -93,3 +93,17 @@ async def integrity_exception_handler(request, exc: IntegrityError):
     )
 
 app.include_router(router)
+
+FRONTEND_DIST = Path(__file__).resolve().parent / "frontend" / "dist"
+if (FRONTEND_DIST / "assets").is_dir():
+    app.mount("/assets", StaticFiles(directory=str(FRONTEND_DIST / "assets")), name="frontend_assets")
+
+@app.get("/{full_path:path}", include_in_schema=False)
+async def serve_frontend_spa(full_path: str):
+    file_path = FRONTEND_DIST / full_path
+    if file_path.is_file():
+        return FileResponse(file_path)
+    index_file = FRONTEND_DIST / "index.html"
+    if index_file.is_file():
+        return FileResponse(index_file)
+    return JSONResponse(status_code=404, content={"detail": "Not found"})
