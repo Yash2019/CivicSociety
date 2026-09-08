@@ -60,4 +60,5 @@ export const api = {
   teams: () => request<Team[]>('/teams'),
   createTeam: (data: Json) => request<Team>('/teams', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }),
   createProject: (data: Json) => request<Project>('/projects', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }),
+  updateProjectStage: (id: number, stage: 'proposed' | 'active' | 'testing' | 'deployed' | 'completed') => request<Project>(`/projects/${id}/stage`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ stage }) }),
 };
