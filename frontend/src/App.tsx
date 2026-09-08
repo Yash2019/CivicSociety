@@ -29,11 +29,20 @@ export default function App() {
     setLoading(true); setNotice(null);
     try {
       const [p, i, pr, d, u, t] = await Promise.all([api.problems(), api.institutions(), api.projects(), api.dashboard(), api.users(), api.teams()]);
+      let availableUsers = u;
+      // Prototype convenience: keep the approval workflow usable even when
+      // a deployment was not seeded with a government administrator.
+      if (!availableUsers.some((user) => user.role === 'gov_admin')) {
+        try {
+          const demoAdmin = await api.createUser({ name: 'District Innovation Officer', email: 'admin.gov@prototype.local', role: 'gov_admin', institution_id: null });
+          availableUsers = [...availableUsers, demoAdmin];
+        } catch { /* an existing database may reject the placeholder email */ }
+      }
       const routed = (await Promise.all(i.map(async (institution) => {
         try { return (await api.institutionProblems(institution.id)).map((item) => ({ ...item, institution_id: institution.id })); }
         catch { return []; }
       }))).flat().filter((item) => item.routing_status === 'accepted');
-      setProblems(p); setInstitutions(i); setProjects(pr); setDashboard(d); setUsers(u); setTeams(t); setOpportunities(routed);
+      setProblems(p); setInstitutions(i); setProjects(pr); setDashboard(d); setUsers(availableUsers); setTeams(t); setOpportunities(routed);
       if (!selectedInstitution && i[0]) setSelectedInstitution(i[0].id);
     } catch (error) { setNotice({ kind: 'error', text: error instanceof Error ? error.message : 'Unable to connect to the civic service.' }); }
     finally { setLoading(false); }
