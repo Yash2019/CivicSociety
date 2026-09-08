@@ -1,6 +1,9 @@
 const configuredApiUrl = String(import.meta.env.VITE_API_URL || '').trim();
+// A combined deployment uses the same origin for the UI and API. Treat
+// documentation placeholders as unset instead of generating an invalid URL.
+const hasUsableApiUrl = configuredApiUrl && !/[<>]/.test(configuredApiUrl);
 const API_BASE_URL = (
-  configuredApiUrl
+  hasUsableApiUrl
     ? (/^https?:\/\//i.test(configuredApiUrl) ? configuredApiUrl : `https://${configuredApiUrl}`)
     : (typeof window !== 'undefined' && !['localhost', '127.0.0.1'].includes(window.location.hostname)
       ? window.location.origin
