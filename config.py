@@ -1,6 +1,7 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import field_validator
 
+from pathlib import Path
 from urllib.parse import urlparse, parse_qsl, urlencode, urlunparse
 
 class Settings(BaseSettings):
@@ -34,9 +35,11 @@ class Settings(BaseSettings):
         return v
 
     model_config = SettingsConfigDict(
-        env_file="backend/.env",
+        # Resolve from this file rather than the shell's current directory.
+        # This keeps `uvicorn main:app --app-dir ..` working when launched
+        # from inside the backend folder as well as from the project root.
+        env_file=Path(__file__).resolve().parent / "backend" / ".env",
         extra='ignore'
     )
 
 config = Settings()
-

@@ -1,5 +1,5 @@
-import os
 from contextlib import asynccontextmanager
+from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -7,7 +7,8 @@ from fastapi.staticfiles import StaticFiles
 from backend.db.db import create_table
 from backend.routers.routes import router
 
-os.makedirs("backend/media", exist_ok=True)
+MEDIA_DIR = Path(__file__).resolve().parent / "backend" / "media"
+MEDIA_DIR.mkdir(parents=True, exist_ok=True)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -68,27 +69,27 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# Enable CORS for all frontend origins (localhost, Live Server, etc.)
+# This API does not use cookie authentication, so credentials must remain off
+# when allowing development origins broadly.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 # Mount media directory for previewing uploaded photos and deliverables
-app.mount("/media", StaticFiles(directory="backend/media"), name="media")
+app.mount("/media", StaticFiles(directory=str(MEDIA_DIR)), name="media")
 
 from fastapi.responses import JSONResponse
 from sqlalchemy.exc import IntegrityError
 
 @app.exception_handler(IntegrityError)
 async def integrity_exception_handler(request, exc: IntegrityError):
-    detail = str(exc.orig) if hasattr(exc, "orig") else str(exc)
     return JSONResponse(
         status_code=400,
-        content={"detail": f"Database constraint error (check IDs provided): {detail}"}
+        content={"detail": "Database constraint error. Check referenced IDs and duplicate values."}
     )
 
-app.include_router(router)
+app.include_router(router)

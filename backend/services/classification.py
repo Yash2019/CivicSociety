@@ -1,5 +1,7 @@
+import asyncio
 from datetime import datetime, timezone
 from pathlib import Path
+from uuid import uuid4
 from fastapi import UploadFile, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
@@ -42,7 +44,9 @@ from backend.trans.translation import classify_issue
 from backend.services.duplication import find_duplicate
 
 
-UPLOAD_DIR = Path("backend/media")
+UPLOAD_DIR = Path(__file__).resolve().parent.parent / "media"
+MAX_UPLOAD_BYTES = 10 * 1024 * 1024
+ALLOWED_UPLOAD_EXTENSIONS = {".pdf", ".png", ".jpg", ".jpeg", ".webp", ".txt", ".doc", ".docx"}
 
 SUBMITTER_WEIGHTS = {
     "govt_dept": 90,
@@ -58,11 +62,32 @@ def compute_priority_score(submitter_type_value: str, has_media: bool = True) ->
     return min(base + evidence_bonus, 100)
 
 
+async def _store_upload(upload: UploadFile, prefix: str) -> tuple[str, str]:
+    """Persist an allowed upload under a generated name and return its public URL."""
+    original_name = upload.filename or ""
+    extension = Path(original_name).suffix.lower()
+    if extension not in ALLOWED_UPLOAD_EXTENSIONS:
+        raise HTTPException(status_code=415, detail="Unsupported file type")
+
+    content = await upload.read(MAX_UPLOAD_BYTES + 1)
+    if not content:
+        raise HTTPException(status_code=400, detail="Uploaded file is empty")
+    if len(content) > MAX_UPLOAD_BYTES:
+        raise HTTPException(status_code=413, detail="Uploaded file exceeds the 10 MB limit")
+
+    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+    filename = f"{prefix}_{uuid4().hex}{extension}"
+    (UPLOAD_DIR / filename).write_bytes(content)
+    return f"/media/{filename}", upload.content_type or "application/octet-stream"
+
+
 async def inputProblems(data: ProblemSchemaInput, 
                         photo: UploadFile | None,
                         db: AsyncSession):
     
-    category = data.category if data.category else classify_issue(data.description)
+    # Classification may call a remote provider; do not block FastAPI's event
+    # loop while it waits for that provider or falls back to keyword matching.
+    category = data.category if data.category else await asyncio.to_thread(classify_issue, data.description)
 
     dup = await find_duplicate(data.title, data.description, category, db)
     
@@ -97,17 +122,11 @@ async def inputProblems(data: ProblemSchemaInput,
         await routeProblemtoInstitute(problem.id, db)
 
     if has_photo and photo is not None:
-        UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-        filename = photo.filename or f"photo_{int(datetime.now(timezone.utc).timestamp())}.bin"
-        file_path = UPLOAD_DIR / f"{problem.id}_{filename}"
-
-        with file_path.open("wb") as buffer:
-            buffer.write(await photo.read())
-
+        file_url, file_type = await _store_upload(photo, f"problem_{problem.id}")
         media = ProblemMedia(
             problem_id=problem.id,
-            file_url=str(file_path),
-            file_type=photo.content_type or "application/octet-stream"
+            file_url=file_url,
+            file_type=file_type
         )
         db.add(media)
 
@@ -137,12 +156,18 @@ async def createYourInstitution(data: Institution, db: AsyncSession):
         except ValueError:
             primary_domain = None
 
+    name = data.name.strip()
+    district = data.district.strip()
+    existing = await db.scalar(select(Institutions).where(func.lower(Institutions.name) == name.lower()))
+    if existing:
+        raise HTTPException(status_code=409, detail="An institution with this name already exists")
+
     create_ins = Institutions(
-        name=data.name,
+        name=name,
         type=data.type,
         domain=primary_domain,
         domains=domains_list,
-        district=data.district,
+        district=district,
         has_incubation=data.has_incubation
     )
 
@@ -236,6 +261,11 @@ async def create_team(data: TeamCreate, db: AsyncSession):
     mentor = await db.get(Users, data.faculty_mentor_id)
     if not mentor:
         raise HTTPException(status_code=404, detail="Faculty mentor user not found")
+    if mentor.role != "faculty":
+        raise HTTPException(status_code=400, detail="Faculty mentor must have the faculty role")
+    if mentor.institution_id is not None and mentor.institution_id != institution.id:
+        raise HTTPException(status_code=400, detail="Faculty mentor must belong to the team's institution")
+
 
     valid_member_ids = [uid for uid in data.member_user_ids if uid and uid > 0]
     for user_id in valid_member_ids:
@@ -307,6 +337,10 @@ async def create_project(data: ProjectCreate, db: AsyncSession):
     if team.problem_id != data.problem_id:
         raise HTTPException(status_code=400, detail="Team problem_id does not match project problem_id")
 
+    existing_project = await db.scalar(select(Projects).where(Projects.team_id == data.team_id))
+    if existing_project:
+        raise HTTPException(status_code=409, detail="A project already exists for this team")
+
     routing_stmt = select(Routings).where(
         Routings.problems_id == data.problem_id,
         Routings.institution_id == team.institution_id,
@@ -350,6 +384,10 @@ async def approve_project(project_id: int, approval_status: ApprovalStatus, admi
     admin = await db.get(Users, admin_id)
     if not admin:
         raise HTTPException(status_code=404, detail="Approving user not found")
+    if admin.role != "gov_admin":
+        raise HTTPException(status_code=403, detail="Only a government administrator can approve or reject projects")
+    if project.approval_status != ApprovalStatus.pending:
+        raise HTTPException(status_code=409, detail="Project approval has already been decided")
     project.approval_status = approval_status
     project.approved_by_user_id = admin_id
     if approval_status == ApprovalStatus.approved and project.stage == ProjectStage.proposed:
@@ -386,6 +424,8 @@ async def update_milestone_status(milestone_id: int, status: MilestoneStatus, db
     milestone.status = status
     if status == MilestoneStatus.completed:
         milestone.completed_at = datetime.now(timezone.utc)
+    else:
+        milestone.completed_at = None
     await db.commit()
     await db.refresh(milestone)
     return milestone
@@ -462,15 +502,12 @@ async def add_deliverable(project_id: int, milestone_id: int | None, doc_type: s
             raise HTTPException(status_code=400, detail="Milestone does not belong to this project")
 
     UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-    filename = file.filename or f"deliverable_{int(datetime.now(timezone.utc).timestamp())}.bin"
-    file_path = UPLOAD_DIR / f"deliverable_{project_id}_{filename}"
-    with file_path.open("wb") as buffer:
-        buffer.write(await file.read())
+    file_url, _ = await _store_upload(file, f"deliverable_{project_id}")
 
     deliverable = Deliverables(
         project_id=project_id,
         milestone_id=valid_milestone_id,
-        file_url=str(file_path),
+        file_url=file_url,
         doc_type=doc_type
     )
     db.add(deliverable)
@@ -499,6 +536,17 @@ async def request_partnership(project_id: int, data: PartnershipCreate, db: Asyn
     institution = await db.get(Institutions, data.industry_institution_id)
     if not institution:
         raise HTTPException(status_code=404, detail="Industry institution not found")
+    eligible_types = {InstitutionType.industry, InstitutionType.startup, InstitutionType.msme, InstitutionType.csr, InstitutionType.research_lab}
+    if institution.type not in eligible_types:
+        raise HTTPException(status_code=400, detail="Partnership institution must be an industry, startup, MSME, CSR organization, or research lab")
+
+    existing = await db.scalar(select(IndustryPartnerships).where(
+        IndustryPartnerships.project_id == project_id,
+        IndustryPartnerships.industry_institution_id == data.industry_institution_id,
+        IndustryPartnerships.partnership_type == data.partnership_type,
+    ))
+    if existing:
+        raise HTTPException(status_code=409, detail="This partnership request already exists")
 
     partnership = IndustryPartnerships(
         project_id=project_id,
@@ -517,6 +565,10 @@ async def update_partnership_status(partnership_id: int, status: PartnershipStat
     partnership = await db.get(IndustryPartnerships, partnership_id)
     if not partnership:
         raise HTTPException(status_code=404, detail="Partnership request not found")
+    if partnership.status != PartnershipStatus.requested:
+        raise HTTPException(status_code=409, detail="Only requested partnerships can be accepted or declined")
+    if status == PartnershipStatus.requested:
+        raise HTTPException(status_code=400, detail="Partnership status must be accepted or declined")
     partnership.status = status
     await db.commit()
     await db.refresh(partnership)
@@ -676,7 +728,8 @@ async def get_dashboard_summary(db: AsyncSession):
 # Users Services
 # ------------------------------------------------------------------------------
 async def create_user(data: UserCreate, db: AsyncSession):
-    existing = await db.scalar(select(Users).where(Users.email == data.email))
+    email = data.email.strip().lower()
+    existing = await db.scalar(select(Users).where(func.lower(Users.email) == email))
     if existing:
         raise HTTPException(status_code=400, detail="User with this email already exists")
 
@@ -687,8 +740,8 @@ async def create_user(data: UserCreate, db: AsyncSession):
             raise HTTPException(status_code=404, detail="Institution not found")
 
     new_user = Users(
-        name=data.name,
-        email=data.email,
+        name=data.name.strip(),
+        email=email,
         role=data.role,
         institution_id=institution_id
     )

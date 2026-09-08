@@ -1,5 +1,6 @@
 from datetime import datetime, date
-from pydantic import BaseModel, ConfigDict, field_validator
+import re
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from backend.enums import (
     SubmitterType,
@@ -18,13 +19,13 @@ from backend.enums import (
 )
 
 class ProblemSchemaInput(BaseModel):
-    title: str
-    description: str
+    title: str = Field(min_length=3, max_length=255)
+    description: str = Field(min_length=10, max_length=10_000)
     submitter_type: SubmitterType = SubmitterType.individual
     category: ProblemCategory | None = None
-    district: str
-    latitude: float
-    longitude: float
+    district: str = Field(min_length=2, max_length=120)
+    latitude: float = Field(ge=-90, le=90)
+    longitude: float = Field(ge=-180, le=180)
     submitted_by: int | None = None
 
     @field_validator("submitted_by", mode="before")
@@ -33,6 +34,14 @@ class ProblemSchemaInput(BaseModel):
         if v is not None and (v == 0 or v == "" or (isinstance(v, int) and v <= 0)):
             return None
         return v
+
+    @field_validator("title", "description", "district")
+    @classmethod
+    def strip_required_text(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("This field cannot be blank")
+        return value
 
 class ProblemSchemaOutput(BaseModel):
     id: int
@@ -59,12 +68,20 @@ class RoutedProblemResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 class Institution(BaseModel):
-    name: str
+    name: str = Field(min_length=2, max_length=255)
     type: InstitutionType = InstitutionType.university
     domain: InstitutionDomain | None = None
-    domains: list[InstitutionDomain] = []
-    district: str
+    domains: list[InstitutionDomain] = Field(default_factory=list)
+    district: str = Field(min_length=2, max_length=120)
     has_incubation: bool = False
+
+    @field_validator("name", "district")
+    @classmethod
+    def strip_institution_text(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("This field cannot be blank")
+        return value
 
 class InstitutionResponse(BaseModel):
     id: int
@@ -80,25 +97,34 @@ class InstitutionResponse(BaseModel):
 
 
 class TeamCreate(BaseModel):
-    problem_id: int
-    institution_id: int
-    faculty_mentor_id: int
-    member_user_ids: list[int] = []
+    problem_id: int = Field(gt=0)
+    institution_id: int = Field(gt=0)
+    faculty_mentor_id: int = Field(gt=0)
+    member_user_ids: list[int] = Field(default_factory=list)
+
+    @field_validator("member_user_ids")
+    @classmethod
+    def unique_member_ids(cls, value: list[int]) -> list[int]:
+        if any(user_id <= 0 for user_id in value):
+            raise ValueError("Member user IDs must be positive")
+        if len(value) != len(set(value)):
+            raise ValueError("Member user IDs must be unique")
+        return value
 
 class TeamResponse(BaseModel):
     id: int
     problem_id: int
     institution_id: int
     faculty_mentor_id: int
-    member_user_ids: list[int] = []
+    member_user_ids: list[int] = Field(default_factory=list)
     model_config = ConfigDict(from_attributes=True)
 
 # --- Project Schemas ---
 class ProjectCreate(BaseModel):
-    team_id: int
-    problem_id: int
-    title: str
-    proposal_text: str
+    team_id: int = Field(gt=0)
+    problem_id: int = Field(gt=0)
+    title: str = Field(min_length=3, max_length=255)
+    proposal_text: str = Field(min_length=20, max_length=20_000)
 
 class ProjectStageUpdate(BaseModel):
     stage: ProjectStage
@@ -121,7 +147,7 @@ class ProjectResponse(BaseModel):
 
 # --- Milestone Schemas ---
 class MilestoneCreate(BaseModel):
-    title: str
+    title: str = Field(min_length=3, max_length=255)
     description: str | None = None
     due_date: date | None = None
 
@@ -140,8 +166,8 @@ class MilestoneResponse(BaseModel):
 
 # --- Outcomes Schemas ---
 class OutcomeUpsert(BaseModel):
-    patents_filed: int = 0
-    startups_created: int = 0
+    patents_filed: int = Field(default=0, ge=0)
+    startups_created: int = Field(default=0, ge=0)
     ip_generated: str | None = None
     impact_notes: str | None = None
 
@@ -181,8 +207,16 @@ class DeliverableResponse(BaseModel):
 
 # --- Message Schemas ---
 class MessageCreate(BaseModel):
-    sender_user_id: int
-    message_text: str
+    sender_user_id: int = Field(gt=0)
+    message_text: str = Field(min_length=1, max_length=10_000)
+
+    @field_validator("message_text")
+    @classmethod
+    def strip_message(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("Message cannot be blank")
+        return value
 
 class MessageResponse(BaseModel):
     id: int
@@ -212,8 +246,8 @@ class DashboardStats(BaseModel):
 
 # --- User Schemas ---
 class UserCreate(BaseModel):
-    name: str
-    email: str
+    name: str = Field(min_length=2, max_length=120)
+    email: str = Field(min_length=3, max_length=150)
     role: UserRole = UserRole.citizen
     institution_id: int | None = None
 
@@ -223,6 +257,21 @@ class UserCreate(BaseModel):
         if v is not None and (v == 0 or v == "" or (isinstance(v, int) and v <= 0)):
             return None
         return v
+
+    @field_validator("name", "email")
+    @classmethod
+    def normalize_user_text(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("This field cannot be blank")
+        return value.lower() if "@" in value else value
+
+    @field_validator("email")
+    @classmethod
+    def validate_email_shape(cls, value: str) -> str:
+        if not re.fullmatch(r"[^\s@]+@[^\s@]+\.[^\s@]+", value):
+            raise ValueError("Enter a valid email address")
+        return value
 
 class UserResponse(BaseModel):
     id: int

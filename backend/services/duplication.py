@@ -10,14 +10,14 @@ vectorizer = TfidfVectorizer(
     max_features=10_000,
 )
 
-DUPLICATE_TRESHOLD = 0.6
+DUPLICATE_THRESHOLD = 0.6
 
 async def find_duplicate(
         title: str,
         description: str,
         category: str,
         db: AsyncSession,
-        treshold: float = DUPLICATE_TRESHOLD,
+        threshold: float = DUPLICATE_THRESHOLD,
 )-> dict | None:
 
     stmt = (
@@ -37,14 +37,19 @@ async def find_duplicate(
     corpus = [f"{row.description}" for row in existing]
     corpus.append(new_text)
 
-    tfid_matrix = vectorizer.fit_transform(corpus)
+    try:
+        tfid_matrix = vectorizer.fit_transform(corpus)
+    except ValueError:
+        # Inputs made exclusively of punctuation or very short tokens have no
+        # useful TF-IDF features and cannot be compared reliably.
+        return None
 
     similarities = cosine_similarity(tfid_matrix[-1:], tfid_matrix[:-1])[0]
 
     best_idx = similarities.argmax()
     best_score = similarities[best_idx]
 
-    if best_score >= treshold:
+    if best_score >= threshold:
 
         return {
             "is_duplicate": True,

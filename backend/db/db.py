@@ -4,7 +4,7 @@ from config import config
 
 engine = create_async_engine(
     url=config.DATABASE_URL,
-    echo=True
+    echo=False
 )
 
 SessionLocal = async_sessionmaker(

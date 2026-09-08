@@ -5,16 +5,18 @@ from pathlib import Path
 # Ensure root directory is in sys.path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from backend.db.db import SessionLocal, create_table
 from backend.Models.users_db import Users
 from backend.Models.institutions import Institutions, Routings
-from backend.Models.problems_db import Problems
+from backend.Models.problems_db import Problems, ProblemMedia
 from backend.Models.teams_db import Teams, Team_member
 from backend.Models.projects_db import Projects
 from backend.Models.milestones_db import Milestones
 from backend.Models.projectoutcome_db import ProjectOutcomes
 from backend.Models.industrypartnership_db import IndustryPartnerships
+from backend.Models.deliverables_db import Deliverables
+from backend.Models.messages_db import Messages
 from backend.enums import (
     SubmitterType,
     StatusType,
@@ -38,6 +40,17 @@ async def seed_data(force: bool = False):
             if existing_users:
                 print("Database already contains data. Skipping seed.")
                 return {"status": "skipped", "message": "Database already contains data. Use force=True to re-seed."}
+
+        if force:
+            # Delete dependent records first so the operation is valid on
+            # PostgreSQL installations that enforce every foreign key.
+            for model in (
+                ProblemMedia, Messages, IndustryPartnerships, Deliverables,
+                ProjectOutcomes, Milestones, Projects, Team_member, Teams,
+                Routings, Problems, Users, Institutions,
+            ):
+                await db.execute(delete(model))
+            await db.commit()
 
         print("Seeding users...")
         users = [
@@ -92,6 +105,9 @@ async def seed_data(force: bool = False):
         ]
         db.add_all(institutions)
         await db.flush()
+        users[2].institution_id = institutions[0].id
+        users[3].institution_id = institutions[0].id
+        users[4].institution_id = institutions[0].id
 
         print("Seeding problems...")
         problem1 = Problems(
