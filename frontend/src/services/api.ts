@@ -53,6 +53,7 @@ export const api = {
   approveProject: (id: number, approval_status: 'approved' | 'rejected', approved_by_user_id: number) => request<Project>(`/projects/${id}/approve`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ approval_status, approved_by_user_id }) }),
   dashboard: () => request<Dashboard>('/dashboard'),
   users: () => request<User[]>('/users'),
+  createUser: (data: Json) => request<User>('/users', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }),
   teams: () => request<Team[]>('/teams'),
   createTeam: (data: Json) => request<Team>('/teams', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }),
   createProject: (data: Json) => request<Project>('/projects', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }),

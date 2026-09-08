@@ -68,7 +68,7 @@ export default function App() {
       {view === 'citizen' && <CitizenView problems={filteredProblems} query={query} setQuery={setQuery} onSubmitted={(p) => { setProblems((items) => [p, ...items]); setNotice({ kind: 'success', text: `Problem registered as CH-${p.id}.` }); }} />}
       {view === 'institutions' && <InstitutionView institutions={institutions} selected={selectedInstitution} setSelected={setSelectedInstitution} routings={routings} onAction={actOnRouting} onRegistered={(i) => setInstitutions((items) => [i, ...items])} />}
       {view === 'projects' && <ProjectsView projects={projects} selected={selectedProject} setSelected={setSelectedProject} data={projectData} />}
-      {view === 'teams' && <TeamsView users={users} institutions={institutions} opportunities={opportunities} teams={teams} onCreated={(team, project) => { setTeams((items) => [team, ...items]); setProjects((items) => [project, ...items]); setView('projects'); setNotice({ kind: 'success', text: `Proposal ${project.title} submitted for government review.` }); }} />}
+      {view === 'teams' && <TeamsView users={users} institutions={institutions} opportunities={opportunities} teams={teams} onUserCreated={(user) => setUsers((items) => [...items, user])} onCreated={(team, project) => { setTeams((items) => [team, ...items]); setProjects((items) => [project, ...items]); setView('projects'); setNotice({ kind: 'success', text: `Proposal ${project.title} submitted for government review.` }); }} />}
       {view === 'dashboard' && <DashboardView dashboard={dashboard} />}
       {view === 'industry' && <IndustryView institutions={institutions} projects={projects} />}
       {view === 'government' && <GovernmentView dashboard={dashboard} projects={projects} onApproved={(p) => setProjects((items) => items.map((item) => item.id === p.id ? p : item))} />}
@@ -93,7 +93,7 @@ function InstitutionView({ institutions, selected, setSelected, routings, onActi
   return <><section className="page-intro"><div><p className="eyebrow">Institution workspace</p><h1>Review routed community problems</h1><p>Institutions can review domain-matched submissions and accept the ones they are equipped to solve.</p></div><button className="primary-button compact" onClick={() => setShowForm(!showForm)}>Register institution</button></section>{showForm && <form className="panel inline-form" onSubmit={register}><label>Name<input required value={name} onChange={(e) => setName(e.target.value)} /></label><label>Type<select value={type} onChange={(e) => setType(e.target.value)}><option value="university">University</option><option value="research_lab">Research lab</option><option value="industry">Industry</option><option value="startup">Startup</option><option value="msme">MSME</option><option value="csr">CSR organisation</option></select></label><label>District<input required value={district} onChange={(e) => setDistrict(e.target.value)} /></label><label>Primary domain<select value={domain} onChange={(e) => setDomain(e.target.value)}>{categories.map(([v, t]) => <option key={v} value={v}>{t}</option>)}</select></label><button className="primary-button">Save institution</button></form>}<section className="panel"><div className="toolbar"><label className="select-label">Institution<select value={selected} onChange={(e) => setSelected(Number(e.target.value))}><option value="">Select an institution</option>{institutions.map((i) => <option key={i.id} value={i.id}>{i.name} · {label(i.type)}</option>)}</select></label><span>{routings.length} routed records</span></div>{routings.length === 0 ? <Empty text="Choose an institution to view its routed problems." /> : <div className="record-list">{routings.map((r) => <article className="routing-card" key={r.routing_id}><div><span className="record-code">Routing #{r.routing_id}</span><span className={`status status-${r.routing_status}`}>{label(r.routing_status)}</span><h3>{r.problem.title}</h3><p>{r.problem.description}</p><small>{r.problem.district} · {label(r.problem.category)} · {r.matched_reason}</small></div><div className="action-row">{r.routing_status === 'pending' && <><button className="small-button accept" onClick={() => onAction(r, 'accept')}>Accept</button><button className="small-button decline" onClick={() => onAction(r, 'decline')}>Decline</button></>}</div></article>)}</div>}</section></>;
 }
 
-function TeamsView({ users, institutions, opportunities, teams, onCreated }: { users: User[]; institutions: Institution[]; opportunities: RoutedOpportunity[]; teams: Team[]; onCreated: (team: Team, project: Project) => void }) {
+function TeamsView({ users, institutions, opportunities, teams, onUserCreated, onCreated }: { users: User[]; institutions: Institution[]; opportunities: RoutedOpportunity[]; teams: Team[]; onUserCreated: (user: User) => void; onCreated: (team: Team, project: Project) => void }) {
   const [opportunityId, setOpportunityId] = useState('');
   const [facultyId, setFacultyId] = useState('');
   const [memberIds, setMemberIds] = useState<number[]>([]);
@@ -101,6 +101,9 @@ function TeamsView({ users, institutions, opportunities, teams, onCreated }: { u
   const [proposal, setProposal] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [participantName, setParticipantName] = useState('');
+  const [participantRole, setParticipantRole] = useState<'faculty' | 'student'>('faculty');
+  const [participantError, setParticipantError] = useState('');
   const opportunity = opportunities.find((item) => String(item.routing_id) === opportunityId);
   const faculty = users.filter((user) => user.role === 'faculty' && (!opportunity || user.institution_id === opportunity.institution_id));
   const students = users.filter((user) => user.role === 'student');
@@ -117,7 +120,17 @@ function TeamsView({ users, institutions, opportunities, teams, onCreated }: { u
     } catch (e) { setError(e instanceof Error ? e.message : 'Unable to submit the proposal.'); }
     finally { setBusy(false); }
   };
+  const addParticipant = async (event: FormEvent) => {
+    event.preventDefault(); setParticipantError('');
+    try {
+      if (!participantName.trim()) throw new Error('Enter a participant name.');
+      const suffix = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+      const user = await api.createUser({ name: participantName.trim(), role: participantRole, institution_id: opportunity?.institution_id || null, email: `${participantRole}-${suffix}@prototype.local` });
+      onUserCreated(user); setParticipantName('');
+    } catch (e) { setParticipantError(e instanceof Error ? e.message : 'Unable to add participant.'); }
+  };
   return <><section className="page-intro"><div><p className="eyebrow">University workspace</p><h1>Form a team and propose a solution</h1><p>Select an accepted community problem, add a faculty mentor and student members, then submit a proposal for government review.</p></div></section>
+    <section className="panel"><div className="panel-heading"><h2>Prototype participant setup</h2><span>No login or verification is used</span></div><p className="muted">Add a faculty mentor or student for this demonstration. Email is generated internally and is not shown.</p><form className="inline-form" onSubmit={addParticipant}><label>Name<input required value={participantName} onChange={(e) => setParticipantName(e.target.value)} placeholder="Participant name" /></label><label>Role<select value={participantRole} onChange={(e) => setParticipantRole(e.target.value as 'faculty' | 'student')}><option value="faculty">Faculty mentor</option><option value="student">Student member</option></select></label><button className="primary-button compact">Add participant</button></form>{participantError && <div className="field-error">{participantError}</div>}</section>
     <form className="panel form-panel proposal-form" onSubmit={submit}><div className="panel-heading"><h2>New solution proposal</h2><span>Only accepted institution routings are eligible</span></div>{error && <div className="field-error">{error}</div>}
       {available.length === 0 ? <div className="empty-state">No accepted problems are waiting for a team. An institution must accept a routed problem first.</div> : <>
         <label>Accepted problem *<select required value={opportunityId} onChange={(e) => { setOpportunityId(e.target.value); setFacultyId(''); }}><option value="">Choose a problem</option>{available.map((item) => <option value={item.routing_id} key={item.routing_id}>{item.problem.title} · {item.problem.district}</option>)}</select></label>
