@@ -47,6 +47,7 @@ export const api = {
   projectOutcomes: (id: number) => request<Outcome>(`/projects/${id}/outcomes`),
   projectPartnerships: (id: number) => request<Partnership[]>(`/projects/${id}/partnerships`),
   requestPartnership: (id: number, data: Json) => request<Partnership>(`/projects/${id}/partnerships`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }),
+  updatePartnershipStatus: (id: number, status: 'accepted' | 'declined') => request<Partnership>(`/partnerships/${id}/status`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }) }),
   projectMessages: (id: number) => request<Message[]>(`/projects/${id}/messages`),
   acceptRouting: (id: number) => request<Routing>(`/routings/${id}/accept`, { method: 'POST' }),
   declineRouting: (id: number) => request<Routing>(`/routings/${id}/decline`, { method: 'POST' }),
